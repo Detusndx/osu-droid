@@ -20,6 +20,7 @@ import android.widget.TextView.OnEditorActionListener
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.edlplan.framework.easing.Easing
 import com.edlplan.ui.BaseAnimationListener
 import com.edlplan.ui.EasingHelper
@@ -32,11 +33,11 @@ import com.reco1l.toolkt.android.drawableRight
 import com.reco1l.toolkt.android.fontColor
 import com.reco1l.toolkt.kotlin.async
 import org.anddev.andengine.input.touch.TouchEvent
+import ru.nsu.ccfit.zuev.osu.GlobalManager
 import ru.nsu.ccfit.zuev.osu.RGBColor
 import ru.nsu.ccfit.zuev.osu.ResourceManager
 import ru.nsu.ccfit.zuev.osuplus.R
 import kotlin.math.abs
-import ru.nsu.ccfit.zuev.osu.GlobalManager.getInstance as getGlobal
 
 
 /**
@@ -49,8 +50,7 @@ private val DEVELOPERS = longArrayOf(
 )
 
 
-class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
-{
+class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener {
 
     override val layoutID = R.layout.multiplayer_room_chat
 
@@ -81,6 +81,7 @@ class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
         recyclerView = findViewById(R.id.chat_text)!!
         recyclerView.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, true)
         recyclerView.adapter = adapter
+        recyclerView.itemAnimator = null
 
         findViewById<Button>(R.id.chat_send)!!.setOnClickListener {
             sendMessage()
@@ -99,8 +100,7 @@ class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
 
         prependMessage(Message(player.id, message))
 
-        val color = when(player.id)
-        {
+        val color = when(player.id) {
             Multiplayer.room!!.host -> "#00FFEA"
             in DEVELOPERS -> "#F280FF"
             else -> "#8282A8"
@@ -119,7 +119,7 @@ class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
 
     private fun prependMessage(message: Message) {
 
-        if (getGlobal().engine.scene != getGlobal().gameScene.scene) {
+        if (GlobalManager.getInstance().engine.scene != GlobalManager.getInstance().gameScene.scene) {
             ResourceManager.getInstance().getSound("heartbeat")?.play(0.75f)
         }
 
@@ -129,11 +129,11 @@ class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
 
     private fun showPreview(content: String, contentColor: String? = null, tag: String? = null, tagColor: String? = null) {
 
-        RGBColor.hex2Rgb(tagColor ?: "#FFFFFF").apply(RoomScene.chatPreview.tag)
-        RGBColor.hex2Rgb(contentColor ?: "#FFFFFF").apply(RoomScene.chatPreview.content)
+        RGBColor.hex2Rgb(tagColor ?: "#FFFFFF").apply(RoomScene.chatPreviewText.tag)
+        RGBColor.hex2Rgb(contentColor ?: "#FFFFFF").apply(RoomScene.chatPreviewText.content)
 
-        RoomScene.chatPreview.setTagText(tag ?: "")
-        RoomScene.chatPreview.setContentText(content)
+        RoomScene.chatPreviewText.setTagText(tag ?: "")
+        RoomScene.chatPreviewText.setContentText(content)
     }
 
     private fun hideKeyboard() {
@@ -282,8 +282,8 @@ class RoomChat : BaseFragment(), OnEditorActionListener, OnKeyListener
             return
         }
 
-        if (getGlobal().engine.scene == getGlobal().gameScene.scene) {
-            getGlobal().gameScene.pause()
+        if (GlobalManager.getInstance().engine.scene == GlobalManager.getInstance().gameScene.scene) {
+            GlobalManager.getInstance().gameScene.pause()
             return
         }
 
@@ -365,7 +365,7 @@ class MessageViewHolder(private val root: LinearLayout) : RecyclerView.ViewHolde
             val isRoomHost = msg.sender == Multiplayer.room!!.host
             val isDeveloper = msg.sender in DEVELOPERS
 
-            senderText.text = Multiplayer.room!!.playersMap[msg.sender]!!.name
+            senderText.text = Multiplayer.room?.playersMap?.get(msg.sender)?.name ?: "Disconnected player"
 
             val color = when {
                 isRoomHost -> 0xFF00FFEA.toInt()

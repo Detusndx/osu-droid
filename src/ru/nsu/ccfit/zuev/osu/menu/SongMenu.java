@@ -652,33 +652,38 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
         randomMap.setScale(1.5f);
         difficultySwitcher.setScale(1.5f);
 
-        if (OsuSkin.get().isUseNewLayout()) {
-            if (layoutBackButton != null) {
-                layoutBackButton.apply(backButton);
-            }
-            if (layoutMods != null && modSelection != null) {
-                layoutMods.apply(modSelection, backButton);
-            }
-            if (layoutOptions != null) {
-                layoutOptions.apply(optionSelection, modSelection != null ? modSelection : backButton);
-            }
-            if (layoutRandom != null) {
-                layoutRandom.apply(randomMap, optionSelection);
-            }
-            if (layoutDifficultySwitcher != null) {
-                layoutDifficultySwitcher.apply(difficultySwitcher, randomMap);
-            }
+        var isNewLayout = OsuSkin.get().isUseNewLayout();
+
+        if (isNewLayout && layoutBackButton != null) {
+            layoutBackButton.apply(backButton);
         } else {
             backButton.setPosition(0, Config.getRES_HEIGHT() - backButton.getHeightScaled());
+        }
 
-            if (modSelection != null) {
-                modSelection.setPosition(backButton.getX() + backButton.getWidthScaled(), Config.getRES_HEIGHT() - modSelection.getHeightScaled());
-                optionSelection.setPosition(modSelection.getX() + modSelection.getWidthScaled(), Config.getRES_HEIGHT() - optionSelection.getHeightScaled());
+        if (modSelection != null) {
+            if (isNewLayout && layoutMods != null) {
+                layoutMods.apply(modSelection, backButton);
             } else {
-                optionSelection.setPosition(backButton.getX() + backButton.getWidthScaled(), Config.getRES_HEIGHT() - optionSelection.getHeightScaled());
+                modSelection.setPosition(backButton.getX() + backButton.getWidthScaled(), Config.getRES_HEIGHT() - modSelection.getHeightScaled());
             }
+        }
 
+        if (isNewLayout && layoutOptions != null) {
+            layoutOptions.apply(optionSelection, modSelection != null ? modSelection : backButton);
+        } else {
+            var prevButton = modSelection != null ? modSelection : backButton;
+            optionSelection.setPosition(prevButton.getX() + prevButton.getWidthScaled(), Config.getRES_HEIGHT() - optionSelection.getHeightScaled());
+        }
+
+        if (isNewLayout && layoutRandom != null) {
+            layoutRandom.apply(randomMap, optionSelection);
+        } else {
             randomMap.setPosition(optionSelection.getX() + optionSelection.getWidthScaled(), Config.getRES_HEIGHT() - randomMap.getHeightScaled());
+        }
+
+        if (isNewLayout && layoutDifficultySwitcher != null) {
+            layoutDifficultySwitcher.apply(difficultySwitcher, randomMap);
+        } else {
             difficultySwitcher.setPosition(randomMap.getX() + randomMap.getWidthScaled(), Config.getRES_HEIGHT() - difficultySwitcher.getHeightScaled());
         }
 
@@ -1028,22 +1033,18 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
             beatmapLengthText.setColor(46 / 255f, 139 / 255f, 87 / 255f);
         }
 
-        float bpm_min = beatmapInfo.getBpmMin() * totalSpeedMultiplier;
-        float bpm_max = beatmapInfo.getBpmMax() * totalSpeedMultiplier;
+        int minBpm = Math.round(beatmapInfo.getBpmMin() * totalSpeedMultiplier);
+        int maxBpm = Math.round(beatmapInfo.getBpmMax() * totalSpeedMultiplier);
+        int commonBpm = Math.round(beatmapInfo.getMostCommonBPM() * totalSpeedMultiplier);
         long length = (long) (beatmapInfo.getLength() / totalSpeedMultiplier);
 
-        @SuppressLint("SimpleDateFormat") SimpleDateFormat sdf = new SimpleDateFormat("mm:ss");
+        @SuppressLint("SimpleDateFormat")
+        SimpleDateFormat sdf = new SimpleDateFormat(length > 3600 * 1000 ? "HH:mm:ss" : "mm:ss");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT+0"));
-        String binfoStr = String.format(StringTable.get(com.edlplan.osudroidresource.R.string.binfoStr1), sdf.format(length),
-                (bpm_min == bpm_max ? GameHelper.Round(bpm_min, 1) : GameHelper.Round(bpm_min, 1) + "-" + GameHelper.Round(bpm_max, 1)),
+        String binfoStr = String.format(StringTable.get(com.osudroid.resources.R.string.binfoStr1), sdf.format(length),
+                (minBpm == maxBpm ? commonBpm : minBpm + "-" + maxBpm + " (" + commonBpm + ")"),
                 beatmapInfo.getMaxCombo());
-        if (length > 3600 * 1000) {
-            sdf = new SimpleDateFormat("HH:mm:ss");
-            sdf.setTimeZone(TimeZone.getTimeZone("GMT+0"));
-            binfoStr = String.format(StringTable.get(com.edlplan.osudroidresource.R.string.binfoStr1), sdf.format(length),
-                    (bpm_min == bpm_max ? GameHelper.Round(bpm_min, 1) : GameHelper.Round(bpm_min, 1) + "-" + GameHelper.Round(bpm_max, 1)),
-                    beatmapInfo.getMaxCombo());
-        }
+
         beatmapLengthText.setText(binfoStr);
 
         String dimensionString =
@@ -1071,8 +1072,12 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
 
         String tinfoStr = beatmapInfo.getArtistText() + " - " + beatmapInfo.getTitleText() + " [" + beatmapInfo.getVersion() + "]";
         String mapperStr = "Beatmap by " + beatmapInfo.getCreator();
-        String binfoStr2 = String.format(StringTable.get(com.edlplan.osudroidresource.R.string.binfoStr2),
-                beatmapInfo.getHitCircleCount(), beatmapInfo.getSliderCount(), beatmapInfo.getSpinnerCount(), beatmapInfo.getSetId());
+        String binfoStr2 = StringTable.format(com.osudroid.resources.R.string.binfoStr2,
+                beatmapInfo.getHitCircleCount(),
+                beatmapInfo.getSliderCount(),
+                beatmapInfo.getSpinnerCount(),
+                beatmapInfo.getSetId()
+        );
         beatmapMetadataText.setText(tinfoStr);
         beatmapCreatorText.setText(mapperStr);
         beatmapHitObjectsText.setText(binfoStr2);
@@ -1267,7 +1272,7 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
     public void openScore(final int id, boolean showOnline, final String playerName) {
         if (showOnline) {
             engine.setScene(new LoadingScreen().getScene());
-            ToastLogger.showTextId(com.edlplan.osudroidresource.R.string.online_loadrecord, false);
+            ToastLogger.showTextId(com.osudroid.resources.R.string.online_loadrecord, false);
 
             cancelCalculationJobs();
             cancelMapStatusLoadingJob();
@@ -1338,7 +1343,7 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
         }
 
         // Locking host from change beatmap before the server responses to beatmapChange
-        RoomScene.awaitBeatmapChange = true;
+        RoomScene.isWaitingForBeatmapChange = true;
 
         if (!Multiplayer.isConnected()) {
             return;
@@ -1366,7 +1371,7 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
         }
 
         // Locking host from change beatmap before the server responses to beatmapChange
-        RoomScene.awaitBeatmapChange = true;
+        RoomScene.isWaitingForBeatmapChange = true;
 
         if (!Multiplayer.isConnected()) {
             return;
@@ -1550,7 +1555,7 @@ public class SongMenu implements IUpdateHandler, MenuItemListener,
     }
 
     public void showDeleteScoreMenu(int scoreId) {
-        (new ScoreMenuFragment()).show(scoreId);
+        (new ScoreMenuFragment()).show(selectedBeatmap, scoreId);
     }
 
     public void select() {

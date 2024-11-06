@@ -32,6 +32,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import com.edlplan.ui.fragment.BaseFragment
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.reco1l.*
 import com.reco1l.framework.bass.URLBassStream
 import com.reco1l.framework.net.IDownloaderObserver
 import com.reco1l.framework.net.JsonArrayRequest
@@ -393,7 +394,7 @@ class BeatmapSetDetails(val beatmapSet: BeatmapSetModel, val holder: BeatmapSetV
 
         downloadButton.setOnClickListener {
             val url = BeatmapListing.mirror.downloadEndpoint(beatmapSet.id)
-            BeatmapDownloader.download(url, "${beatmapSet.id} ${beatmapSet.artist} - ${beatmapSet.title}.osz")
+            BeatmapDownloader.download(url, "${beatmapSet.id} ${beatmapSet.artist} - ${beatmapSet.title}")
         }
 
         cover.setImageDrawable(holder.cover.drawable)
@@ -598,7 +599,7 @@ class BeatmapSetViewHolder(itemView: View, private val mediaScope: CoroutineScop
 
         downloadButton.setOnClickListener {
             val url = BeatmapListing.mirror.downloadEndpoint(beatmapSet.id)
-            BeatmapDownloader.download(url, "${beatmapSet.id} ${beatmapSet.artist} - ${beatmapSet.title}.osz")
+            BeatmapDownloader.download(url, "${beatmapSet.id} ${beatmapSet.artist} - ${beatmapSet.title}")
         }
 
 

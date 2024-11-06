@@ -18,10 +18,11 @@ import kotlin.math.min
 
 fun convertToJson(ini: IniReader) = JSONObject().apply {
 
-    fun convertToHex(ints: IntArray?): String?
-    {
-        if (ints == null || ints.isEmpty())
+    fun convertToHex(ints: IntArray?): String? {
+
+        if (ints == null || ints.isEmpty()) {
             return null
+        }
 
         return buildString {
 
@@ -35,8 +36,7 @@ fun convertToJson(ini: IniReader) = JSONObject().apply {
     fun parseComboColors(ini: IniReader) = mutableListOf<String>().also {
 
         // osu! skins supports up to 7 combo colors
-        for (i in 0 until 8)
-        {
+        for (i in 0 until 8) {
             val ints: IntArray = ini["Colours", "Combo${i + 1}"] ?: continue
 
             // At this point convertToHex() shouldn't return null, but we handle it anyway.
@@ -109,45 +109,66 @@ fun convertToJson(ini: IniReader) = JSONObject().apply {
         put("comboTextScale", 0.8f)
         put("animationFramerate", ini["General", "AnimationFramerate"] ?: -1f)
         put("layeredHitSounds", ini.get<Boolean>("General", "LayeredHitSounds") != false)
-        put("SliderBallFlip", ini.get<Boolean>("General", "SliderBallFlip") != false)
+        put("sliderBallFlip", ini.get<Boolean>("General", "SliderBallFlip") != false)
         put("spinnerFrequencyModulate", ini.get<Boolean>("General", "SpinnerFrequencyModulate") != false)
     }
 
     putObject("Layout") {
 
+        put("useNewLayout", true)
+
         putObject("BackButton") {
             put("scaleWhenHold", false)
+        }
+
+        // In osu!droid's default skin, these buttons are cut in the bottom, which makes them smaller
+        // (see https://github.com/osudroid/osu-droid/commit/7bc5040ce426760c2f3ea04b7209e4ded8e78524).
+        // To account for this behavior in osu! skins, we need to offset by them 16 pixels downwards.
+        // A negative value is used as the origin and anchor of these buttons are in the bottom-left
+        // corner (see SkinLayout).
+        putObject("ModsButton") {
+            put("y", -16)
+        }
+
+        putObject("OptionsButton") {
+            put("y", -16)
+        }
+
+        putObject("RandomButton") {
+            put("y", -16)
         }
     }
 }
 
 
+fun ensureOptionalTexture(file: File) {
 
-fun ensureOptionalTexture(file: File)
-{
-    if (file.exists()) return
+    if (file.exists()) {
+        return
+    }
 
     val bitmap = Bitmap.createBitmap(1, 1, Config.ARGB_8888)
     bitmap.setHasAlpha(true)
     bitmap.setPixel(0, 0, Color.TRANSPARENT)
 
-    try
-    {
+    try {
         FileOutputStream(file).use {
             bitmap.compress(CompressFormat.PNG, 100, it)
         }
+    } catch (e: IOException) {
+        e.printStackTrace()
     }
-    catch (e: IOException) { e.printStackTrace() }
 }
 
-fun ensureTexture(file: File)
-{
-    if (!file.exists()) return
+fun ensureTexture(file: File) {
+
+    if (!file.exists()) {
+        return
+    }
 
     BitmapFactory.decodeFile(file.path)?.apply {
 
-        if (width <= 1 || height <= 1)
-        {
+        if (width <= 1 || height <= 1) {
             file.delete()
             return
         }
@@ -155,8 +176,7 @@ fun ensureTexture(file: File)
         val pixels = IntArray(width * height)
         getPixels(pixels, 0, width, 0, 0, width, height)
 
-        if (pixels.all { Color.alpha(it) == 0 })
-        {
+        if (pixels.all { Color.alpha(it) == 0 }) {
             file.delete()
         }
     }
