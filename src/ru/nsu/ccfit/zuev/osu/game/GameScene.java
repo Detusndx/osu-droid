@@ -672,6 +672,8 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
                     previousDrawTime = currentDrawTime;
                 }
             };
+            
+            scene.attachChild(drawFpsDummyEntity);
 
         cancelLoading();
 
