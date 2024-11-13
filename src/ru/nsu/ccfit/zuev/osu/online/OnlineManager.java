@@ -7,7 +7,6 @@ import android.os.Bundle;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import com.reco1l.osu.data.BeatmapInfo;
-import com.reco1l.toolkt.kotlin.StringsKt;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 
@@ -35,7 +34,7 @@ public class OnlineManager {
     public static final String endpoint = "https://" + hostname + "/api/";
     public static final String updateEndpoint = endpoint + "update.php?lang=";
     public static final String defaultAvatarURL = "https://" + hostname + "/user/avatar/0.png";
-    private static final String onlineVersion = "41";
+    private static final String onlineVersion = "42";
 
     public static final OkHttpClient client = new OkHttpClient();
 
@@ -45,7 +44,6 @@ public class OnlineManager {
     private boolean stayOnline = true;
     private String ssid = "";
     private long userId = -1L;
-    private String playID = "";
 
     private String username = "";
     private String password = "";
@@ -177,63 +175,10 @@ public class OnlineManager {
         return true;
     }
 
-    public void startPlay(final BeatmapInfo beatmapInfo, final String hash) throws OnlineManagerException {
-        Debug.i("Starting play...");
-        playID = null;
-
-        PostBuilder post = new URLEncodedPostBuilder();
-        post.addParam("userID", String.valueOf(userId));
-        post.addParam("ssid", ssid);
-        post.addParam("filename", StringsKt.replaceAlphanumeric(beatmapInfo.getFullBeatmapName(), "_"));
-        post.addParam("hash", hash);
-        post.addParam("songTitle", beatmapInfo.getTitle());
-        post.addParam("songArtist", beatmapInfo.getArtist());
-        post.addParam("songCreator", beatmapInfo.getCreator());
-
-        Long beatmapId = beatmapInfo.getId();
-        if (beatmapId != null && beatmapId != -1) {
-            post.addParam("songID", String.valueOf(beatmapId));
-        }
-
-        ArrayList<String> response = sendRequest(post, endpoint + "submit.php");
-
-        if (response == null) {
-            if (failMessage.equals("Cannot log in") && stayOnline) {
-                if (tryToLogIn()) {
-                    startPlay(beatmapInfo, hash);
-                }
-            }
-            return;
-        }
-
-        if (response.size() < 2) {
-            failMessage = "Invalid server response";
-            return;
-        }
-
-        String[] resp = response.get(1).split("\\s+");
-        if (resp.length < 2) {
-            failMessage = "Invalid server response";
-            return;
-        }
-
-        if (!resp[0].equals("1")) {
-            return;
-        }
-
-        playID = resp[1];
-        Debug.i("Getting play ID = " + playID);
-    }
-
-    public boolean sendRecord(String data, String replayFilename) throws OnlineManagerException {
-        if (playID == null || playID.isEmpty()) {
-            failMessage = "I don't have play ID";
-            return false;
-        }
-
+    public boolean sendRecord(BeatmapInfo beatmap, String scoreData, String replayPath) throws OnlineManagerException {
         Debug.i("Sending record...");
 
-        File replayFile = new File(replayFilename);
+        File replayFile = new File(replayPath);
         if (!replayFile.exists()) {
             failMessage = "Replay file not found";
             Debug.e("Replay file not found");
@@ -242,8 +187,10 @@ public class OnlineManager {
 
         var post = new FormDataPostBuilder();
         post.addParam("userID", String.valueOf(userId));
-        post.addParam("playID", playID);
-        post.addParam("data", data);
+        post.addParam("ssid", ssid);
+        post.addParam("filename", beatmap.getFullBeatmapName().trim());
+        post.addParam("hash", beatmap.getMD5());
+        post.addParam("data", scoreData);
 
         MediaType replayMime = MediaType.parse("application/octet-stream");
         RequestBody replayFileBody = RequestBody.create(replayFile, replayMime);
@@ -447,10 +394,6 @@ public class OnlineManager {
 
     public void setStayOnline(boolean stayOnline) {
         this.stayOnline = stayOnline;
-    }
-
-    public boolean isReadyToSend() {
-        return (playID != null);
     }
 
     public int getMapRank() {

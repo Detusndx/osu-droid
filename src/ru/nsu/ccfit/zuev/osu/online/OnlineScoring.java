@@ -146,31 +146,8 @@ public class OnlineScoring {
         });
     }
 
-    public void startPlay(final BeatmapInfo beatmapInfo, final String hash) {
+    public void sendRecord(final BeatmapInfo beatmap, final StatisticV2 record, final SendingPanel panel, final String replayPath) {
         if (!OnlineManager.getInstance().isStayOnline())
-            return;
-
-        Execution.async(() -> {
-            synchronized (onlineMutex) {
-                for (int i = 0; i < attemptCount; i++) {
-                    try {
-                        OnlineManager.getInstance().startPlay(beatmapInfo, hash);
-                    } catch (OnlineManager.OnlineManagerException e) {
-                        Debug.e("Login error: " + e.getMessage());
-                        continue;
-                    }
-                    break;
-                }
-
-                if (OnlineManager.getInstance().getFailMessage().length() > 0) {
-                    ToastLogger.showText(OnlineManager.getInstance().getFailMessage(), true);
-                }
-            }
-        });
-    }
-
-    public void sendRecord(final StatisticV2 record, final SendingPanel panel, final String replay) {
-        if (!OnlineManager.getInstance().isStayOnline() || !OnlineManager.getInstance().isReadyToSend())
             return;
 
         Debug.i("Sending score");
@@ -187,7 +164,7 @@ public class OnlineScoring {
                     }
 
                     try {
-                        success = OnlineManager.getInstance().sendRecord(recordData, replay);
+                        success = OnlineManager.getInstance().sendRecord(beatmap, recordData, replayPath);
                     } catch (OnlineManager.OnlineManagerException e) {
                         Debug.e("Login error: " + e.getMessage());
                         success = false;

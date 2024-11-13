@@ -53,8 +53,7 @@ import com.rian.osu.difficulty.attributes.DroidDifficultyAttributes;
 import com.rian.osu.difficulty.attributes.StandardDifficultyAttributes;
 import com.rian.osu.difficulty.attributes.TimedDifficultyAttributes;
 import com.rian.osu.difficulty.calculator.DifficultyCalculationParameters;
-import com.rian.osu.ui.DrawFPSCounter;
-import com.rian.osu.ui.UpdateFPSCounter;
+import com.rian.osu.ui.FPSCounter;
 import com.rian.osu.utils.ModUtils;
 
 import org.anddev.andengine.engine.Engine;
@@ -105,7 +104,6 @@ import ru.nsu.ccfit.zuev.osu.menu.ModMenu;
 import ru.nsu.ccfit.zuev.osu.menu.PauseMenu;
 import ru.nsu.ccfit.zuev.osu.menu.ScoreBoardItem;
 import ru.nsu.ccfit.zuev.osu.online.OnlineFileOperator;
-import ru.nsu.ccfit.zuev.osu.online.OnlineScoring;
 import ru.nsu.ccfit.zuev.osu.scoring.Replay;
 import ru.nsu.ccfit.zuev.osu.scoring.ResultType;
 import ru.nsu.ccfit.zuev.osu.scoring.ScoringScene;
@@ -187,8 +185,6 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
     private DifficultyCalculationParameters lastDifficultyCalculationParameters;
     private TimedDifficultyAttributes<DroidDifficultyAttributes>[] droidTimedDifficultyAttributes;
     private TimedDifficultyAttributes<StandardDifficultyAttributes>[] standardTimedDifficultyAttributes;
-
-    private DrawFPSCounter drawFpsCounter;
 
     private final List<ChangeableText> counterTexts = new ArrayList<>(5);
     private ChangeableText avgOffsetText;
@@ -557,10 +553,6 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
             replay = null;
         }
 
-        //TODO online
-        if (!replaying)
-            OnlineScoring.getInstance().startPlay(beatmapInfo, parsedBeatmap.getMd5());
-
         if (Config.isEnableStoryboard()) {
             storyboardSprite.loadStoryboard(beatmapInfo.getPath());
         }
@@ -758,7 +750,6 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
             text.detachSelf();
         }
         counterTexts.clear();
-        drawFpsCounter = null;
 
         hud = new GameplayHUD(stat, this, !Config.isHideInGameUI());
         engine.getCamera().setHUD(hud);
@@ -766,9 +757,9 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
         var counterTextFont = ResourceManager.getInstance().getFont("smallFont");
 
         if (Config.isShowFPS()) {
-            drawFpsCounter = new DrawFPSCounter(new ChangeableText(790, 520, counterTextFont, "Draw: 999/999 FPS"));
+            var fpsCounter = new FPSCounter(counterTextFont);
 
-            // Attach a dummy entity for computing draw FPS, as its frame rate is tied to the draw thread and not
+            // Attach a dummy entity for computing FPS, as its frame rate is tied to the draw thread and not
             // the update thread.
             hud.attachChild(new Entity() {
                 private long previousDrawTime;
@@ -777,19 +768,13 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
                 protected void onManagedDraw(GL10 pGL, Camera pCamera) {
                     long currentDrawTime = SystemClock.uptimeMillis();
 
-                    drawFpsCounter.updateFps((currentDrawTime - previousDrawTime) / 1000f);
+                    fpsCounter.updateFps((currentDrawTime - previousDrawTime) / 1000f);
 
                     previousDrawTime = currentDrawTime;
                 }
             });
 
-            var updateFpsCounter = new UpdateFPSCounter(new ChangeableText(790, 480, counterTextFont, "Update: 999/999 FPS"));
-
-            counterTexts.add(drawFpsCounter.displayText);
-            counterTexts.add(updateFpsCounter.displayText);
-
-            hud.registerUpdateHandler(updateFpsCounter);
-            hud.registerUpdateHandler(drawFpsCounter);
+            counterTexts.add(fpsCounter);
         }
 
         if (Config.isShowUnstableRate() && !GameHelper.isAuto()) {

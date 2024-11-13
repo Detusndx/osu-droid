@@ -28,22 +28,30 @@ public class BassSoundProvider {
 
     public boolean prepare(final String fileName) {
         free();
-        if (fileName != null && fileName.length() > 0) {
+
+        if (fileName != null && !fileName.isEmpty()) {
             sample = BASS.BASS_SampleLoad(fileName, 0, 0, SIMULTANEOUS_PLAYBACKS, BASS.BASS_SAMPLE_OVER_POS);
             BASS.BASS_SampleGetInfo(sample, sampleInfo);
             applyAudioEffectsToSample();
+        } else {
+            sample = 0;
         }
+
         return sample != 0;
     }
 
     public boolean prepare(final AssetManager manager, final String assetName) {
         free();
-        if (manager != null && assetName != null && assetName.length() > 0) {
+
+        if (manager != null && assetName != null && !assetName.isEmpty()) {
             BASS.Asset asset = new BASS.Asset(manager, assetName);
             sample = BASS.BASS_SampleLoad(asset, 0, 0, SIMULTANEOUS_PLAYBACKS, BASS.BASS_SAMPLE_OVER_POS);
             BASS.BASS_SampleGetInfo(sample, sampleInfo);
             applyAudioEffectsToSample();
+        } else {
+            sample = 0;
         }
+
         return sample != 0;
     }
 
@@ -52,23 +60,26 @@ public class BassSoundProvider {
     }
 
     public void play(float volume) {
-        if (sample != 0) {
-            channel = BASS.BASS_SampleGetChannel(sample, false);
-            applyAudioEffectsToChannel();
-            BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_NOBUFFER, 1);
-            BASS.BASS_ChannelPlay(channel, false);
-            BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_VOL, volume * Config.getSoundVolume());
+        if (sample == 0) {
+            return;
         }
+
+        channel = BASS.BASS_SampleGetChannel(sample, BASS.BASS_SAMCHAN_STREAM | BASS.BASS_STREAM_AUTOFREE);
+        applyAudioEffectsToChannel();
+        BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_NOBUFFER, 1);
+        BASS.BASS_ChannelPlay(channel, false);
+        BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_VOL, volume * Config.getSoundVolume());
     }
 
     public void stop() {
-        if (sample != 0) {
-            BASS.BASS_ChannelStop(channel);
+        if (channel == 0) {
+            return;
         }
+
+        BASS.BASS_ChannelStop(channel);
     }
 
     public void free() {
-        stop();
         BASS.BASS_SampleFree(sample);
         sample = 0;
     }
