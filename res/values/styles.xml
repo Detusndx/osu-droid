@@ -29,9 +29,14 @@
         <item name="seekBarPreferenceStyle">@style/settings_preference_seekbar</item>
     </style>
 
+    <style name="ActivityTheme">
+       <item name="android:windowLayoutInDisplayCutoutMode">
+          shortEdges <!-- default, shortEdges, or never -->
+       </item> 
+    </style>
 
     <!--Elements-->
-    <style name="editText" parent="Widget.AppCompat.EditText">
+    <style name="editText" parent="Widget.AppCompat.EditText"> 
         <item name="android:layout_centerHorizontal">true</item>
         <item name="android:layout_centerVertical">true</item>
         <item name="android:background">@drawable/rounded_rect</item>
