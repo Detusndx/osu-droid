@@ -24,6 +24,7 @@ import android.os.PowerManager;
 import android.os.StatFs;
 import android.util.DisplayMetrics;
 import android.view.Display;
+import android.view.WindowManager;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Surface;
