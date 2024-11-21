@@ -554,7 +554,6 @@ public class MainActivity extends BaseGameActivity implements
         super.onCreate(pSavedInstanceState);
 
         getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
     
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
