@@ -544,7 +544,7 @@ public class MainActivity extends BaseGameActivity implements
     public static boolean isActivityVisible() {
         return activityVisible;
     }
-
+@TargetApi(28)
     @Override
     protected void onCreate(Bundle pSavedInstanceState) {
         // Some components may already start using this class when onCreate is called. An example
