@@ -30,9 +30,7 @@
     </style>
 
     <style name="ActivityTheme">
-       <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="27">
-          shortEdges <!-- default, shortEdges, or never -->
-       </item> 
+       <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="31">always</item>
     </style>
 
     <!--Elements-->
