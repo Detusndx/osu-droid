@@ -13,8 +13,6 @@ public class BassSoundProvider {
 
     public static final BassSoundProvider EMPTY = new BassSoundProvider();
 
-    private static final int SIMULTANEOUS_PLAYBACKS = 8;
-
     private int sample = 0;
     private int channel = 0;
     private boolean looping;
@@ -30,7 +28,7 @@ public class BassSoundProvider {
         free();
 
         if (fileName != null && !fileName.isEmpty()) {
-            sample = BASS.BASS_SampleLoad(fileName, 0, 0, SIMULTANEOUS_PLAYBACKS, BASS.BASS_SAMPLE_OVER_POS);
+            sample = BASS.BASS_SampleLoad(fileName, 0, 0, 1, BASS.BASS_SAMPLE_OVER_POS);
             BASS.BASS_SampleGetInfo(sample, sampleInfo);
             applyAudioEffectsToSample();
         } else {
@@ -45,7 +43,7 @@ public class BassSoundProvider {
 
         if (manager != null && assetName != null && !assetName.isEmpty()) {
             BASS.Asset asset = new BASS.Asset(manager, assetName);
-            sample = BASS.BASS_SampleLoad(asset, 0, 0, SIMULTANEOUS_PLAYBACKS, BASS.BASS_SAMPLE_OVER_POS);
+            sample = BASS.BASS_SampleLoad(asset, 0, 0, 1, BASS.BASS_SAMPLE_OVER_POS);
             BASS.BASS_SampleGetInfo(sample, sampleInfo);
             applyAudioEffectsToSample();
         } else {
@@ -64,10 +62,30 @@ public class BassSoundProvider {
             return;
         }
 
-        channel = BASS.BASS_SampleGetChannel(sample, BASS.BASS_SAMCHAN_STREAM | BASS.BASS_STREAM_AUTOFREE);
-        applyAudioEffectsToChannel();
-        BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_NOBUFFER, 1);
-        BASS.BASS_ChannelPlay(channel, false);
+        if (volume == 0) {
+            stop();
+            return;
+        }
+
+        if (channel == 0) {
+            channel = BASS.BASS_SampleGetChannel(sample, BASS.BASS_SAMCHAN_STREAM);
+
+            if (channel == 0) {
+                return;
+            }
+
+            applyAudioEffectsToChannel();
+            BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_NOBUFFER, 1);
+        }
+
+        if (channel == 0) {
+            return;
+        }
+
+        // Ensure the current playback is stopped first.
+        stop();
+
+        BASS.BASS_ChannelPlay(channel, true);
         BASS.BASS_ChannelSetAttribute(channel, BASS.BASS_ATTRIB_VOL, volume * Config.getSoundVolume());
     }
 
@@ -76,12 +94,19 @@ public class BassSoundProvider {
             return;
         }
 
-        BASS.BASS_ChannelStop(channel);
+        if (BASS.BASS_ChannelIsActive(channel) == BASS.BASS_ACTIVE_PLAYING) {
+            BASS.BASS_ChannelStop(channel);
+        }
     }
 
     public void free() {
+        if (sample == 0) {
+            return;
+        }
+
         BASS.BASS_SampleFree(sample);
         sample = 0;
+        channel = 0;
     }
 
     public void setLooping(boolean looping) {

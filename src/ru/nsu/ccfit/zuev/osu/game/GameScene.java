@@ -1726,6 +1726,11 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
     }
 
     private String registerHit(final int objectId, final int score, final boolean endCombo, final boolean incrementCombo) {
+
+        if (isGameOver) {
+            return "hit0";
+        }
+
         boolean writeReplay = objectId != -1 && replay != null && !replaying;
         if (score == 0) {
             if (stat.getCombo() > 30) {
@@ -2139,6 +2144,27 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
         return true;
     }
 
+    private void removeAllCursors() {
+        var frameOffset = previousFrameTime > 0 ? (SystemClock.uptimeMillis() - previousFrameTime) * GameHelper.getSpeedMultiplier() : 0;
+        var time = (int) (elapsedTime * 1000 + frameOffset);
+
+        for (int i = 0; i < CursorCount; ++i) {
+            var cursor = cursors[i];
+
+            if (cursor.mouseDown) {
+                cursor.mouseDown = false;
+
+                if (replay != null) {
+                    replay.addUp(time, i);
+                }
+            }
+
+            if (cursorSprites != null) {
+                cursorSprites[i].setShowing(false);
+            }
+        }
+    }
+
     public void pause() {
 
         if (paused) {
@@ -2176,23 +2202,8 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
 
         stopLoopingSamples();
 
-        // Release all pressed cursors to avoid getting stuck at resume.
         if (!GameHelper.isAuto() && !GameHelper.isAutopilotMod() && !replaying) {
-            var frameOffset = previousFrameTime > 0 ? (SystemClock.uptimeMillis() - previousFrameTime) * GameHelper.getSpeedMultiplier() : 0;
-            var time = (int) (elapsedTime * 1000 + frameOffset);
-
-            for (int i = 0; i < CursorCount; ++i) {
-                var cursor = cursors[i];
-
-                if (cursor.mouseDown) {
-                    cursor.mouseDown = false;
-
-                    if (replay != null)
-                        replay.addUp(time, i);
-                }
-                if (cursorSprites != null)
-                    cursorSprites[i].setShowing(false);
-            }
+            removeAllCursors();
         }
 
         if (blockAreaFragment != null) {
@@ -2216,11 +2227,8 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
         }
         isGameOver = true;
 
-        // Releasing all cursors visually. At this point touch events will no longer be processed.
-        for (int i = 0; i < CursorCount; ++i) {
-            if (cursorSprites != null) {
-                cursorSprites[i].setShowing(false);
-            }
+        if (!replaying) {
+            removeAllCursors();
         }
 
         if (Multiplayer.isMultiplayer) {
@@ -2238,15 +2246,29 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
         }
 
         stopLoopingSamples();
+        SongService songService = GlobalManager.getInstance().getSongService();
+
+        if (GameHelper.isPerfect()) {
+            if (video != null) {
+                video.pause();
+            }
+            songService.pause();
+            paused = true;
+            scene.setIgnoreUpdate(true);
+            return;
+        }
+
         ResourceManager.getInstance().getSound("failsound").play();
-        final PauseMenu menu = new PauseMenu(engine, this, true);
         gameStarted = false;
 
-        SongService songService = GlobalManager.getInstance().getSongService();
         float initialFrequency = songService.getFrequency();
 
-        // Wind down animation for failing based on osu!stable behavior.
+        // Locally saving the scenes references to avoid unexpected behavior when the scene is changed.
+        ExtendedScene scene = this.scene;
+        ExtendedScene mgScene = this.mgScene;
+        ExtendedScene bgScene = this.bgScene;
 
+        // Wind down animation for failing based on osu!stable behavior.
         engine.registerUpdateHandler(new IUpdateHandler() {
             private float elapsedTime;
 
@@ -2272,6 +2294,13 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
 
             @Override
             public void onUpdate(float pSecondsElapsed) {
+
+                // Ensure this update handler is removed under unexpected circumstances.
+                if (engine.getScene() != scene) {
+                    engine.unregisterUpdateHandler(this);
+                    return;
+                }
+
                 elapsedTime += pSecondsElapsed;
 
                 // In osu!stable, the update is capped to 60 FPS. This means in higher framerates, the animations
@@ -2293,8 +2322,11 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
                     float decreasedSpeed = GameHelper.getSpeedMultiplier() * (1 - (initialFrequency - decreasedFrequency) / initialFrequency);
 
                     scene.setTimeMultiplier(decreasedSpeed);
+
                     if (video != null) {
-                        video.setPlaybackSpeed(decreasedSpeed);
+                        // Aparently MediaPlayer API doesn't support setting playback speed
+                        // below 0.01 causing an IllegalStateException.
+                        video.setPlaybackSpeed(Math.max(0.01f, decreasedSpeed));
                     }
 
                     songService.setFrequencyForcefully(decreasedFrequency);
@@ -2315,6 +2347,7 @@ public class GameScene implements IUpdateHandler, GameObjectListener,
                     scene.setIgnoreUpdate(true);
                     engine.unregisterUpdateHandler(this);
 
+                    PauseMenu menu = new PauseMenu(engine, GameScene.this, true);
                     hud.setChildScene(menu.getScene(), false, true, true);
                 }
             }
